@@ -11,7 +11,7 @@ from collections import namedtuple
 from widgetastic.exceptions import NoSuchElementException, UnexpectedAlertPresentException, \
     WidgetOperationFailed
 from widgetastic.log import call_sig
-from widgetastic.utils import ParametrizedLocator, VersionPick
+from widgetastic.utils import ParametrizedLocator, VersionPick, partial_match
 from widgetastic.widget import BaseInput, ClickableMixin, TextInput, Text, Widget, View, \
     do_not_read_this_widget
 from widgetastic.xpath import quote
@@ -731,6 +731,8 @@ class BootstrapSelect(Widget, ClickableMixin):
     LOCATOR_START = './/div[contains(@class, "bootstrap-select")]'
     ROOT = ParametrizedLocator('{@locator}')
     BY_VISIBLE_TEXT = './div/ul/li/a[./span[contains(@class, "text") and normalize-space(.)={}]]'
+    BY_PARTIAL_VISIBLE_TEXT = (
+        './div/ul/li/a[./span[contains(@class, "text") and contains(normalize-space(.), {})]]')
 
     def __init__(
             self, parent, id=None, name=None, locator=None, can_hide_on_select=False, logger=None):
@@ -777,18 +779,28 @@ class BootstrapSelect(Widget, ClickableMixin):
 
         Args:
             *items: Items to be selected. If the select does not support multiple selections and you
-                pass more than one item, it will raise an exception.
+                pass more than one item, it will raise an exception. If you want to select using
+                partial match, use the :py:class:`BootstrapSelect.partial` to wrap the value.
         """
         if len(items) > 1 and not self.is_multiple:
             raise ValueError(
                 'The BootstrapSelect {} does not allow multiple selections'.format(self.id))
         self.open()
-        for text in items:
-            self.logger.info('selecting by visible text: %r', text)
-            try:
-                self.browser.click(self.BY_VISIBLE_TEXT.format(quote(text)), parent=self)
-            except NoSuchElementException:
-                raise NoSuchElementException('Could not find {!r} in {!r}'.format(text, self))
+        for item in items:
+            if isinstance(item, partial_match):
+                item = item.item
+                self.logger.info('selecting by partial visible text: %r', item)
+                try:
+                    self.browser.click(self.BY_PARTIAL_VISIBLE_TEXT.format(quote(item)))
+                except NoSuchElementException:
+                    raise NoSuchElementException(
+                        'Could not find {!r} in {!r} using partial match'.format(item, self))
+            else:
+                self.logger.info('selecting by visible text: %r', item)
+                try:
+                    self.browser.click(self.BY_VISIBLE_TEXT.format(quote(item)))
+                except NoSuchElementException:
+                    raise NoSuchElementException('Could not find {!r} in {!r}'.format(item, self))
         self.close()
 
     @property
