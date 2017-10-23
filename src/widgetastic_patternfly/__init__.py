@@ -784,7 +784,7 @@ class BootstrapSelect(Widget, ClickableMixin):
         """
         if len(items) > 1 and not self.is_multiple:
             raise ValueError(
-                'The BootstrapSelect {} does not allow multiple selections'.format(self.id))
+                'The BootstrapSelect {} does not allow multiple selections'.format(self.locator))
         self.open()
         for item in items:
             if isinstance(item, partial_match):
@@ -845,7 +845,7 @@ class BootstrapSelect(Widget, ClickableMixin):
             return True
 
     def __repr__(self):
-        return '{}({!r})'.format(type(self).__name__, self.id)
+        return '{}(locator={!r})'.format(type(self).__name__, self.locator)
 
 
 class BootstrapTreeview(Widget):
